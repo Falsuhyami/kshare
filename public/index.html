@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="root">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خشير — المنصة الذكية لشراكات حقيقية</title>
+<meta name="description" content="انشر فكرتك، اجذب شركاء حقيقيين، واكسب من كل مهتم. ٩٩ ريال للنشر — ٢٥ ريال للتواصل — ٥ ريال لك عن كل مهتم.">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root {
+  --bg: #080810;
+  --bg2: #0e0e1a;
+  --card: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.08);
+  --purple: #a855f7;
+  --purple2: #7c3aed;
+  --pink: #ec4899;
+  --green: #22c55e;
+  --text: #f1f1f1;
+  --muted: #888;
+  --radius: 16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Tahoma,sans-serif;line-height:1.6;overflow-x:hidden}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 20px 60px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(168,85,247,.25) 0%,transparent 70%),radial-gradient(ellipse 60% 40% at 80% 100%,rgba(236,72,153,.15) 0%,transparent 60%);pointer-events:none}
+.grid-overlay{position:absolute;inset:0;background-image:linear-gradient(rgba(168,85,247,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(168,85,247,.04) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;animation:gridDrift 20s linear infinite}
+@keyframes gridDrift{from{transform:translateY(0)}to{transform:translateY(60px)}}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);border-radius:99px;padding:6px 16px;font-size:.85rem;color:var(--purple);margin-bottom:24px}
+.badge-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1.15;margin-bottom:20px}
+h1 .grad{background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:1.15rem;color:var(--muted);max-width:540px;margin:0 auto 40px}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;border:none;transition:all .2s;text-decoration:none}
+.btn-primary{background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(168,85,247,.4)}
+.btn-ghost{background:var(--card);border:1px solid var(--card-border);color:var(--text)}
+.btn-ghost:hover{background:rgba(255,255,255,.08)}
+.stats-row{display:flex;gap:32px;justify-content:center;margin-top:60px;flex-wrap:wrap}
+.stat{text-align:center}
+.stat-n{font-size:2rem;font-weight:800;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-l{font-size:.8rem;color:var(--muted);margin-top:2px}
+
+/* ── TICKER ── */
+.ticker{background:rgba(168,85,247,.08);border-top:1px solid rgba(168,85,247,.15);border-bottom:1px solid rgba(168,85,247,.15);padding:12px 0;overflow:hidden;position:relative}
+.ticker-track{display:flex;gap:0;animation:tickerMove 35s linear infinite;white-space:nowrap}
+.ticker-item{display:inline-flex;align-items:center;gap:8px;padding:0 32px;font-size:.88rem;color:var(--muted)}
+.ticker-item span{color:var(--purple)}
+@keyframes tickerMove{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* ── SECTIONS ── */
+section{padding:80px 20px}
+.container{max-width:1100px;margin:0 auto}
+.section-title{text-align:center;margin-bottom:56px}
+.section-title h2{font-size:2rem;font-weight:800;margin-bottom:8px}
+.section-title p{color:var(--muted);font-size:1rem}
+
+/* ── LISTINGS GRID ── */
+.listings-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.listing-card{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:24px;cursor:pointer;transition:all .25s;position:relative;overflow:hidden}
+.listing-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(168,85,247,.06),transparent);opacity:0;transition:opacity .25s}
+.listing-card:hover{border-color:rgba(168,85,247,.4);transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.listing-card:hover::before{opacity:1}
+.card-cat{display:inline-block;background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.25);color:var(--purple);border-radius:99px;padding:3px 12px;font-size:.78rem;margin-bottom:12px}
+.card-featured{position:absolute;top:14px;left:14px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;border-radius:99px;padding:2px 10px;font-size:.72rem;font-weight:700}
+.card-title{font-size:1.1rem;font-weight:700;margin-bottom:8px;line-height:1.4}
+.card-desc{color:var(--muted);font-size:.88rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:16px}
+.card-meta{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.meta-pill{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:99px;padding:3px 10px;font-size:.78rem;color:var(--muted)}
+.card-footer{display:flex;align-items:center;justify-content:space-between}
+.interest-row{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)}
+.interest-row strong{color:var(--text)}
+.earn-badge{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:var(--green);border-radius:99px;padding:3px 10px;font-size:.8rem;font-weight:600}
+.unlock-btn{background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .2s}
+.unlock-btn:hover{transform:scale(1.04);box-shadow:0 4px 20px rgba(168,85,247,.4)}
+
+/* Loading skeleton */
+.skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.08) 50%,rgba(255,255,255,.04) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-card{height:260px;border-radius:var(--radius)}
+
+/* ── HOW IT WORKS ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px}
+.step{background:var(--card);border:1px solid var(--card-border);border-radius:var(--radius);padding:28px;text-align:center}
+.step-num{width:48px;height:48px;background:linear-gradient(135deg,var(--purple),var(--pink));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;margin:0 auto 16px}
+.step h3{font-size:1rem;font-weight:700;margin-bottom:6px}
+.step p{color:var(--muted);font-size:.88rem}
+
+/* ── CALC ── */
+.calc-box{background:var(--card);border:1px solid var(--card-border);border-radius:20px;padding:40px;max-width:600px;margin:0 auto}
+.calc-row{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.calc-label{flex:1;color:var(--muted);font-size:.95rem}
+.calc-input{background:rgba(255,255,255,.06);border:1px solid var(--card-border);border-radius:10px;padding:10px 16px;color:#fff;font-size:1rem;width:100px;text-align:center}
+.calc-input:focus{outline:none;border-color:var(--purple)}
+.calc-result{background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(236,72,153,.08));border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:20px;text-align:center;margin-top:24px}
+.calc-result .big{font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.calc-note{color:var(--muted);font-size:.85rem;margin-top:6px}
+
+/* ── FOOTER ── */
+footer{background:var(--bg2);border-top:1px solid var(--card-border);padding:40px 20px;text-align:center}
+.footer-logo{font-size:1.5rem;font-weight:800;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+footer p{color:var(--muted);font-size:.85rem}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(8,8,16,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--card-border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px}
+.nav-logo{font-size:1.3rem;font-weight:800;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-actions{display:flex;align-items:center;gap:12px}
+.lang-btn{background:none;border:1px solid var(--card-border);color:var(--muted);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:.85rem;transition:all .2s}
+.lang-btn:hover,.lang-btn.active{border-color:var(--purple);color:var(--purple)}
+.nav-cta{background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:.9rem;font-weight:700;cursor:pointer}
+
+/* ── MODALS ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .25s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:#13131f;border:1px solid rgba(168,85,247,.2);border-radius:20px;padding:36px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;transform:translateY(20px);transition:transform .25s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-title{font-size:1.4rem;font-weight:800;margin-bottom:24px;text-align:center}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:.88rem;color:var(--muted);margin-bottom:6px}
+.form-group input,.form-group textarea,.form-group select{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--card-border);border-radius:10px;padding:12px 16px;color:#fff;font-size:.95rem;font-family:inherit;transition:border .2s}
+.form-group textarea{resize:vertical;min-height:80px}
+.form-group select option{background:#13131f}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{outline:none;border-color:var(--purple)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{margin-top:24px;display:flex;gap:10px}
+.modal-footer .btn{flex:1;justify-content:center}
+.close-btn{position:absolute;top:16px;left:16px;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;padding:4px 8px;border-radius:6px}
+.close-btn:hover{color:#fff;background:rgba(255,255,255,.08)}
+
+/* Steps indicator */
+.steps-indicator{display:flex;gap:8px;margin-bottom:24px;justify-content:center}
+.step-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.15);transition:.2s}
+.step-dot.active{background:var(--purple);width:24px;border-radius:4px}
+
+/* Price preview */
+.price-box{background:rgba(168,85,247,.08);border:1px solid rgba(168,85,247,.2);border-radius:12px;padding:20px;margin:20px 0;text-align:center}
+.price-main{font-size:2rem;font-weight:800;color:var(--purple)}
+.price-earn{display:flex;justify-content:center;gap:24px;margin-top:12px;font-size:.85rem;color:var(--muted)}
+.price-earn span strong{color:var(--green)}
+
+/* Success modal */
+.success-icon{font-size:4rem;text-align:center;margin-bottom:16px}
+.contact-card{background:rgba(168,85,247,.1);border:2px solid rgba(168,85,247,.3);border-radius:14px;padding:24px;text-align:center;margin:16px 0}
+.contact-name{font-size:1.3rem;font-weight:800;margin-bottom:8px}
+.contact-wa{font-size:1.5rem;color:var(--green);font-weight:700;margin:8px 0}
+.wa-btn{display:inline-flex;align-items:center;gap:8px;background:#25D366;color:#fff;border:none;border-radius:10px;padding:12px 24px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:12px;text-decoration:none}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1a1a2e;border:1px solid rgba(168,85,247,.3);border-radius:12px;padding:14px 20px;font-size:.9rem;z-index:9999;transform:translateX(120%);transition:transform .3s;max-width:320px}
+.toast.show{transform:translateX(0)}
+.toast.success{border-color:rgba(34,197,94,.4);background:#0d2d0d}
+.toast.error{border-color:rgba(239,68,68,.4);background:#2d0d0d}
+
+/* Error state */
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state .icon{font-size:3rem;margin-bottom:16px}
+
+@media(max-width:600px){
+  .form-row{grid-template-columns:1fr}
+  .modal{padding:24px}
+  h1{font-size:1.8rem}
+  .stats-row{gap:20px}
+  nav{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">خشير</div>
+  <div class="nav-actions">
+    <button class="lang-btn active" onclick="setLang('ar')">ع</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="nav-cta" onclick="openListingModal()" data-t="navCta">اعرض فكرتك</button>
+  </div>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker" style="margin-top:64px">
+  <div class="ticker-track" id="tickerTrack">
+    <span class="ticker-item">🔓 <span>Ahmad</span> فتح بيانات تواصل «تطبيق توصيل صحي»</span>
+    <span class="ticker-item">💡 <span>Sara</span> نشرت فكرة جديدة في التقنية</span>
+    <span class="ticker-item">💰 صاحب فكرة كسب <span>+35 ريال</span> هذا اليوم</span>
+    <span class="ticker-item">🔓 <span>Khaled</span> فتح بيانات «سلسلة محطات شحن»</span>
+    <span class="ticker-item">🚀 فكرة جديدة نُشرت في قطاع <span>الاستثمار</span></span>
+    <span class="ticker-item">💡 <span>Layla</span> نشرت فكرة في قطاع التعليم</span>
+    <!-- duplicate for seamless loop -->
+    <span class="ticker-item">🔓 <span>Ahmad</span> فتح بيانات تواصل «تطبيق توصيل صحي»</span>
+    <span class="ticker-item">💡 <span>Sara</span> نشرت فكرة جديدة في التقنية</span>
+    <span class="ticker-item">💰 صاحب فكرة كسب <span>+35 ريال</span> هذا اليوم</span>
+    <span class="ticker-item">🔓 <span>Khaled</span> فتح بيانات «سلسلة محطات شحن»</span>
+    <span class="ticker-item">🚀 فكرة جديدة نُشرت في قطاع <span>الاستثمار</span></span>
+    <span class="ticker-item">💡 <span>Layla</span> نشرت فكرة في قطاع التعليم</span>
+  </div>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="grid-overlay"></div>
+  <div class="badge"><span class="badge-dot"></span><span data-t="badgeText">منصة شراكات ذكية للسوق السعودي</span></div>
+  <h1 data-t="heroTitle">فكرتك تستحق<br><span class="grad">شريكاً حقيقياً</span></h1>
+  <p class="hero-sub" data-t="heroSub">انشر فكرتك مقابل ٩٩ ريال. كل شخص مهتم يدفع ٢٥ ريالاً للتواصل معك — وتكسب ٥ ريال عن كل مهتم. بعد ٢٠ مهتم تسترد رسومك كاملة.</p>
+  <div class="cta-row">
+    <button class="btn btn-primary" onclick="openListingModal()"><span data-t="cta1">اعرض فكرتك — ٩٩ ريال</span></button>
+    <a href="#listings" class="btn btn-ghost" data-t="cta2">تصفح الأفكار</a>
+  </div>
+  <div class="stats-row">
+    <div class="stat"><div class="stat-n" id="statListings">--</div><div class="stat-l" data-t="statL1">فكرة منشورة</div></div>
+    <div class="stat"><div class="stat-n" id="statUnlocks">--</div><div class="stat-l" data-t="statL2">عملية تواصل</div></div>
+    <div class="stat"><div class="stat-n">٩٩ ر</div><div class="stat-l" data-t="statL3">رسوم النشر</div></div>
+    <div class="stat"><div class="stat-n">٥ ر</div><div class="stat-l" data-t="statL4">تكسب / مهتم</div></div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section style="background:var(--bg2)">
+  <div class="container">
+    <div class="section-title">
+      <h2 data-t="howTitle">كيف يعمل خشير؟</h2>
+      <p data-t="howSub">ثلاث خطوات تربطك بشريك حقيقي</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">١</div>
+        <h3 data-t="s1t">انشر فكرتك</h3>
+        <p data-t="s1d">ادفع ٩٩ ريالاً مرة واحدة وأنشر فكرتك أمام آلاف الباحثين عن شراكات</p>
+      </div>
+      <div class="step">
+        <div class="step-num">٢</div>
+        <h3 data-t="s2t">المهتمون يتواصلون</h3>
+        <p data-t="s2d">كل شخص مهتم يدفع ٢٥ ريالاً للحصول على بياناتك — الدفع يُثبت الجدية</p>
+      </div>
+      <div class="step">
+        <div class="step-num">٣</div>
+        <h3 data-t="s3t">اكسب من اهتمامهم</h3>
+        <p data-t="s3d">تكسب ٥ ريال عن كل شخص مهتم. بعد ٢٠ مهتم تسترد رسوم النشر كاملة</p>
+      </div>
+      <div class="step">
+        <div class="step-num">٤</div>
+        <h3 data-t="s4t">تواصل مباشر</h3>
+        <p data-t="s4d">بعد الدفع يُرسل البريد فوراً — لا انتظار، لا وسيط، لا يدوي</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LISTINGS -->
+<section id="listings">
+  <div class="container">
+    <div class="section-title">
+      <h2 data-t="listTitle">الأفكار المتاحة للشراكة</h2>
+      <p data-t="listSub">كل فكرة بحاجة لشريك — هل أنت المناسب؟</p>
+    </div>
+    <div class="listings-grid" id="listingsGrid">
+      <!-- Skeleton loading -->
+      <div class="skeleton skel-card"></div>
+      <div class="skeleton skel-card"></div>
+      <div class="skeleton skel-card"></div>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="icon">💡</div>
+      <p>لا توجد أفكار حالياً — كن أول من ينشر!</p>
+      <button class="btn btn-primary" style="margin-top:16px" onclick="openListingModal()">انشر فكرتك الآن</button>
+    </div>
+  </div>
+</section>
+
+<!-- EARNINGS CALCULATOR -->
+<section style="background:var(--bg2)">
+  <div class="container">
+    <div class="section-title">
+      <h2 data-t="calcTitle">احسب أرباحك</h2>
+      <p data-t="calcSub">كم يمكنك أن تكسب من فكرتك؟</p>
+    </div>
+    <div class="calc-box">
+      <div class="calc-row">
+        <label class="calc-label" data-t="calcL1">عدد المهتمين المتوقعين</label>
+        <input type="number" class="calc-input" id="calcInterested" value="30" min="1" max="999" oninput="updateCalc()">
+      </div>
+      <div class="calc-result" id="calcResult">
+        <div class="big" id="calcNet">+٥١ ريال</div>
+        <div class="calc-note" id="calcNote">بعد خصم رسوم النشر ٩٩ ريال</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">خشير</div>
+  <p data-t="footerTag">المنصة الذكية لشراكات حقيقية</p>
+  <p style="margin-top:8px;font-size:.78rem">© 2025 خشير · جميع الحقوق محفوظة</p>
+</footer>
+
+<!-- ─────────────── MODALS ─────────────── -->
+
+<!-- LISTING MODAL -->
+<div class="overlay" id="listingOverlay">
+  <div class="modal" style="position:relative">
+    <button class="close-btn" onclick="closeModal('listingOverlay')">✕</button>
+    <div class="steps-indicator">
+      <div class="step-dot active" id="ldot0"></div>
+      <div class="step-dot" id="ldot1"></div>
+      <div class="step-dot" id="ldot2"></div>
+    </div>
+    <!-- Step 0: Idea Info -->
+    <div id="lStep0">
+      <div class="modal-title">📝 تفاصيل الفكرة</div>
+      <div class="form-group">
+        <label>عنوان الفكرة *</label>
+        <input id="lTitle" type="text" placeholder="مثال: تطبيق توصيل طعام صحي" maxlength="80">
+      </div>
+      <div class="form-group">
+        <label>وصف مختصر للفكرة *</label>
+        <textarea id="lDesc" placeholder="اشرح فكرتك وما تحتاجه من الشريك..." maxlength="500"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>القطاع</label>
+          <select id="lCat">
+            <option value="تقنية">تقنية</option>
+            <option value="استثمار">استثمار</option>
+            <option value="تعليم">تعليم</option>
+            <option value="صحة">صحة</option>
+            <option value="تجارة">تجارة إلكترونية</option>
+            <option value="عقار">عقار</option>
+            <option value="خدمات">خدمات</option>
+            <option value="أخرى">أخرى</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>الميزانية المتوقعة</label>
+          <input id="lBudget" type="text" placeholder="مثال: ٥٠,٠٠٠ - ١٠٠,٠٠٠ ريال">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>الجدول الزمني</label>
+          <input id="lTimeline" type="text" placeholder="مثال: ٦ أشهر">
+        </div>
+        <div class="form-group">
+          <label>نوع الشريك المطلوب</label>
+          <input id="lPartner" type="text" placeholder="مثال: مطور، مستثمر...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="listingNext(1)">التالي ←</button>
+      </div>
+    </div>
+
+    <!-- Step 1: Contact Info -->
+    <div id="lStep1" style="display:none">
+      <div class="modal-title">📞 بيانات التواصل</div>
+      <p style="color:var(--muted);font-size:.88rem;margin-bottom:20px;text-align:center">هذه البيانات ستُكشف فقط للمهتمين الذين يدفعون ٢٥ ريالاً</p>
+      <div class="form-group">
+        <label>اسمك *</label>
+        <input id="lName" type="text" placeholder="اسمك الكامل">
+      </div>
+      <div class="form-group">
+        <label>البريد الإلكتروني *</label>
+        <input id="lEmail" type="email" placeholder="email@example.com" dir="ltr">
+      </div>
+      <div class="form-group">
+        <label>واتساب *</label>
+        <input id="lWA" type="tel" placeholder="05xxxxxxxx أو +966xxxxxxxxx" dir="ltr">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="listingNext(0)">← رجوع</button>
+        <button class="btn btn-primary" onclick="listingNext(2)">التالي ←</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Preview & Pay -->
+    <div id="lStep2" style="display:none">
+      <div class="modal-title">💳 مراجعة ودفع</div>
+      <div class="price-box">
+        <div style="color:var(--muted);font-size:.9rem;margin-bottom:4px">رسوم نشر الفكرة</div>
+        <div class="price-main">٩٩ ريال</div>
+        <div class="price-earn">
+          <span>تكسب <strong>+٥ ريال</strong> لكل مهتم</span>
+          <span>البالانس بعد ٢٠ = <strong>صفر</strong></span>
+        </div>
+      </div>
+      <div id="lPreview" style="background:rgba(255,255,255,.03);border-radius:10px;padding:16px;font-size:.88rem;color:var(--muted);margin-bottom:8px"></div>
+      <p style="color:var(--muted);font-size:.8rem;text-align:center">سيتم تحويلك لصفحة الدفع الآمنة عبر ميسر</p>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="listingNext(1)">← رجوع</button>
+        <button class="btn btn-primary" id="lPayBtn" onclick="submitListing()">
+          <span id="lPayBtnText">ادفع وانشر الفكرة</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- UNLOCK MODAL -->
+<div class="overlay" id="unlockOverlay">
+  <div class="modal" style="position:relative">
+    <button class="close-btn" onclick="closeModal('unlockOverlay')">✕</button>
+    <div class="modal-title">🔓 فتح بيانات التواصل</div>
+    <div id="unlockListingTitle" style="text-align:center;color:var(--purple);font-weight:700;margin-bottom:8px"></div>
+    <div class="price-box" style="margin-bottom:20px">
+      <div style="color:var(--muted);font-size:.88rem">رسوم فتح بيانات التواصل</div>
+      <div class="price-main">٢٥ ريال</div>
+      <div style="color:var(--muted);font-size:.82rem;margin-top:4px">ستصل بيانات صاحب الفكرة إلى بريدك فور الدفع</div>
+    </div>
+    <div class="form-group">
+      <label>اسمك الكامل *</label>
+      <input id="uName" type="text" placeholder="اسمك">
+    </div>
+    <div class="form-group">
+      <label>بريدك الإلكتروني *</label>
+      <input id="uEmail" type="email" placeholder="email@example.com" dir="ltr">
+    </div>
+    <div class="form-group">
+      <label>جوالك (للتواصل) *</label>
+      <input id="uPhone" type="tel" placeholder="05xxxxxxxx" dir="ltr">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('unlockOverlay')">إلغاء</button>
+      <button class="btn btn-primary" id="uPayBtn" onclick="submitUnlock()">
+        <span id="uPayBtnText">ادفع ٢٥ ريال واكشف البيانات</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS: LISTING POSTED -->
+<div class="overlay" id="successListingOverlay">
+  <div class="modal" style="position:relative;text-align:center">
+    <div class="success-icon">🎉</div>
+    <div class="modal-title">تم نشر فكرتك بنجاح!</div>
+    <p style="color:var(--muted);margin-bottom:16px">فكرتك الآن مباشرة أمام الجميع. سيصلك إيميل تأكيد وإشعار بكل مهتم جديد.</p>
+    <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:12px;padding:16px;margin:16px 0">
+      <p style="color:var(--green);font-weight:700">كيف تزيد المهتمين؟</p>
+      <p style="color:var(--muted);font-size:.88rem;margin-top:6px">شارك رابط الموقع في شبكتك لزيادة فرص الشراكة</p>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="closeModal('successListingOverlay')">عرض الأفكار</button>
+  </div>
+</div>
+
+<!-- SUCCESS: CONTACT REVEALED -->
+<div class="overlay" id="successUnlockOverlay">
+  <div class="modal" style="position:relative;text-align:center">
+    <button class="close-btn" onclick="closeModal('successUnlockOverlay')">✕</button>
+    <div class="success-icon">🔓</div>
+    <div class="modal-title">تم! إليك بيانات التواصل</div>
+    <div class="contact-card">
+      <div class="contact-name" id="revealedName">—</div>
+      <div class="contact-wa" id="revealedWA">—</div>
+      <div style="color:var(--muted);font-size:.85rem" id="revealedEmail">—</div>
+      <a class="wa-btn" id="revealedWALink" href="#" target="_blank">
+        💬 تواصل عبر واتساب
+      </a>
+    </div>
+    <p style="color:var(--muted);font-size:.82rem">تم إرسال نفس البيانات إلى بريدك الإلكتروني أيضاً</p>
+    <div style="background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.2);border-radius:10px;padding:12px;margin-top:16px">
+      <p style="color:#fbbf24;font-size:.82rem">⚠️ خشير منصة ربط فقط. أي اتفاقية شراكة تتم على مسؤوليتك الشخصية.</p>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SUPABASE INIT ──
+const SUPABASE_URL = 'https://laerkdcdbgamohtlwpud.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhZXJrZGNkYmdhbW9odGx3cHVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MTI5NDEsImV4cCI6MjA5ODM4ODk0MX0.TBrDKG79fwLm4PX2LlxwfZF2SNp2h618jN3AFfaSVZA';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// Current unlock target
+let currentListingId = null;
+let currentListingTitle = '';
+let currentLStep = 0;
+
+// ── LOAD LISTINGS ──
+async function loadListings() {
+  const grid = document.getElementById('listingsGrid');
+  const empty = document.getElementById('emptyState');
+
+  try {
+    const { data: listings, error } = await sb
+      .from('public_listings')
+      .select('*')
+      .order('is_featured', { ascending: false })
+      .order('interest_count', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+
+    if (!listings || listings.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      document.getElementById('statListings').textContent = '0';
+      document.getElementById('statUnlocks').textContent = '0';
+      return;
+    }
+
+    document.getElementById('statListings').textContent = listings.length + '+';
+    const totalUnlocks = listings.reduce((sum, l) => sum + (l.interest_count || 0), 0);
+    document.getElementById('statUnlocks').textContent = totalUnlocks + '+';
+
+    grid.innerHTML = listings.map(renderCard).join('');
+
+  } catch (err) {
+    console.error('Error loading listings:', err);
+    grid.innerHTML = '<div class="empty-state"><div class="icon">⚠️</div><p>تعذّر تحميل البيانات، حاول مجدداً</p></div>';
+  }
+}
+
+function renderCard(l) {
+  const earnPerUnlock = 5;
+  return `
+    <div class="listing-card" onclick="openUnlock('${l.id}', '${escHtml(l.title)}')">
+      ${l.is_featured ? '<div class="card-featured">⭐ مميز</div>' : ''}
+      <div class="card-cat">${escHtml(l.category || 'تقنية')}</div>
+      <div class="card-title">${escHtml(l.title)}</div>
+      <div class="card-desc">${escHtml(l.description)}</div>
+      <div class="card-meta">
+        ${l.budget_range ? `<span class="meta-pill">💰 ${escHtml(l.budget_range)}</span>` : ''}
+        ${l.timeline ? `<span class="meta-pill">⏱ ${escHtml(l.timeline)}</span>` : ''}
+        ${l.location ? `<span class="meta-pill">📍 ${escHtml(l.location)}</span>` : ''}
+      </div>
+      <div class="card-footer">
+        <div class="interest-row">
+          👥 <strong>${l.interest_count || 0}</strong> مهتم
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${l.earn_balance > 0 ? `<span class="earn-badge">+${l.earn_balance} ر</span>` : ''}
+          <button class="unlock-btn" onclick="event.stopPropagation();openUnlock('${l.id}', '${escHtml(l.title)}')">
+            🔓 اكشف التواصل — ٢٥ ر
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── LISTING MODAL ──
+function openListingModal() {
+  currentLStep = 0;
+  listingNext(0);
+  openModal('listingOverlay');
+}
+
+function listingNext(step) {
+  // Validate before moving forward
+  if (step === 1) {
+    const title = document.getElementById('lTitle').value.trim();
+    const desc = document.getElementById('lDesc').value.trim();
+    if (!title || !desc) { showToast('يرجى ملء العنوان والوصف', 'error'); return; }
+  }
+  if (step === 2) {
+    const name = document.getElementById('lName').value.trim();
+    const email = document.getElementById('lEmail').value.trim();
+    const wa = document.getElementById('lWA').value.trim();
+    if (!name || !email || !wa) { showToast('يرجى ملء جميع بيانات التواصل', 'error'); return; }
+    if (!email.includes('@')) { showToast('البريد الإلكتروني غير صحيح', 'error'); return; }
+    // Update preview
+    document.getElementById('lPreview').innerHTML = `
+      <strong>الفكرة:</strong> ${escHtml(document.getElementById('lTitle').value)}<br>
+      <strong>القطاع:</strong> ${document.getElementById('lCat').value}<br>
+      <strong>صاحب الفكرة:</strong> ${escHtml(name)}
+    `;
+  }
+  // Hide all steps
+  [0,1,2].forEach(i => {
+    document.getElementById('lStep'+i).style.display = 'none';
+    document.getElementById('ldot'+i).classList.remove('active');
+  });
+  document.getElementById('lStep'+step).style.display = 'block';
+  document.getElementById('ldot'+step).classList.add('active');
+  currentLStep = step;
+}
+
+async function submitListing() {
+  const btn = document.getElementById('lPayBtn');
+  const btnText = document.getElementById('lPayBtnText');
+  btn.disabled = true;
+  btnText.textContent = 'جاري الإعداد...';
+
+  const payload = {
+    title: document.getElementById('lTitle').value.trim(),
+    description: document.getElementById('lDesc').value.trim(),
+    category: document.getElementById('lCat').value,
+    budget_range: document.getElementById('lBudget').value.trim(),
+    timeline: document.getElementById('lTimeline').value.trim(),
+    expected_partner: document.getElementById('lPartner').value.trim(),
+    owner_name: document.getElementById('lName').value.trim(),
+    owner_email: document.getElementById('lEmail').value.trim(),
+    owner_whatsapp: document.getElementById('lWA').value.trim()
+  };
+
+  try {
+    const res = await fetch('/api/create-listing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!res.ok || !data.payment_url) {
+      showToast(data.error || 'حدث خطأ، حاول مجدداً', 'error');
+      btn.disabled = false;
+      btnText.textContent = 'ادفع وانشر الفكرة';
+      return;
+    }
+
+    // Redirect to Moyasar payment page
+    window.location.href = data.payment_url;
+
+  } catch (err) {
+    showToast('تعذّر الاتصال، تأكد من الإنترنت', 'error');
+    btn.disabled = false;
+    btnText.textContent = 'ادفع وانشر الفكرة';
+  }
+}
+
+// ── UNLOCK MODAL ──
+function openUnlock(listingId, title) {
+  currentListingId = listingId;
+  currentListingTitle = title;
+  document.getElementById('unlockListingTitle').textContent = `"${title}"`;
+  openModal('unlockOverlay');
+}
+
+async function submitUnlock() {
+  const btn = document.getElementById('uPayBtn');
+  const btnText = document.getElementById('uPayBtnText');
+
+  const name = document.getElementById('uName').value.trim();
+  const email = document.getElementById('uEmail').value.trim();
+  const phone = document.getElementById('uPhone').value.trim();
+
+  if (!name || !email || !phone) { showToast('يرجى ملء جميع الحقول', 'error'); return; }
+  if (!email.includes('@')) { showToast('البريد الإلكتروني غير صحيح', 'error'); return; }
+
+  btn.disabled = true;
+  btnText.textContent = 'جاري الإعداد...';
+
+  try {
+    const res = await fetch('/api/create-unlock', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        listing_id: currentListingId,
+        unlocker_name: name,
+        unlocker_email: email,
+        unlocker_phone: phone
+      })
+    });
+    const data = await res.json();
+
+    if (data.error === 'already_unlocked') {
+      showToast('لقد سبق لك فتح بيانات هذه الفكرة', 'error');
+      btn.disabled = false;
+      btnText.textContent = 'ادفع ٢٥ ريال واكشف البيانات';
+      return;
+    }
+
+    if (!res.ok || !data.payment_url) {
+      showToast(data.error || 'حدث خطأ، حاول مجدداً', 'error');
+      btn.disabled = false;
+      btnText.textContent = 'ادفع ٢٥ ريال واكشف البيانات';
+      return;
+    }
+
+    window.location.href = data.payment_url;
+
+  } catch (err) {
+    showToast('تعذّر الاتصال، تأكد من الإنترنت', 'error');
+    btn.disabled = false;
+    btnText.textContent = 'ادفع ٢٥ ريال واكشف البيانات';
+  }
+}
+
+// ── MODAL HELPERS ──
+function openModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow=''; }
+document.querySelectorAll('.overlay').forEach(ov => {
+  ov.addEventListener('click', e => { if (e.target === ov) closeModal(ov.id); });
+});
+
+// ── TOAST ──
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── EARNINGS CALCULATOR ──
+function updateCalc() {
+  const interested = parseInt(document.getElementById('calcInterested').value) || 0;
+  const EARN = 5;
+  const LISTING_FEE = 99;
+  const gross = interested * EARN;
+  const net = gross - LISTING_FEE;
+  const breakeven = Math.ceil(LISTING_FEE / EARN); // = 20
+
+  document.getElementById('calcNet').textContent =
+    net >= 0
+      ? `+${net.toLocaleString('ar-SA')} ريال`
+      : `${net.toLocaleString('ar-SA')} ريال`;
+
+  document.getElementById('calcNote').textContent =
+    net >= 0
+      ? `ربح صافٍ بعد خصم رسوم النشر (استرددتها بعد ${breakeven} مهتماً)`
+      : `رسوم النشر ٩٩ ريال (تسترد الكامل بعد ${breakeven} مهتماً)`;
+}
+
+// ── HANDLE PAYMENT RETURN ──
+function handlePaymentReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const success = params.get('success');
+  const error = params.get('error');
+  const contact = params.get('contact');
+
+  if (success === 'listing') {
+    openModal('successListingOverlay');
+    loadListings();
+  }
+
+  if (success === 'unlock' && contact) {
+    try {
+      const info = JSON.parse(decodeURIComponent(contact));
+      document.getElementById('revealedName').textContent = info.name || '—';
+      document.getElementById('revealedWA').textContent = info.whatsapp || '—';
+      document.getElementById('revealedEmail').textContent = info.email || '—';
+      const waNum = (info.whatsapp || '').replace(/\D/g, '');
+      document.getElementById('revealedWALink').href = `https://wa.me/${waNum}`;
+      openModal('successUnlockOverlay');
+      loadListings(); // refresh interest counts
+    } catch (e) {
+      showToast('تم الدفع بنجاح — تحقق من بريدك الإلكتروني', 'success');
+    }
+  }
+
+  if (error) {
+    const msgs = {
+      'payment_not_paid': 'لم يتم الدفع أو تم إلغاؤه',
+      'payment_verify_failed': 'تعذّر التحقق من الدفع، تواصل مع الدعم',
+      'listing_not_found': 'لم نجد الفكرة، تواصل مع الدعم',
+      'server_error': 'خطأ في الخادم، حاول مجدداً'
+    };
+    showToast(msgs[error] || 'حدث خطأ: ' + error, 'error');
+  }
+
+  // Clean URL
+  if (success || error) {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+}
+
+// ── LANGUAGE ──
+const T = {
+  ar: {
+    navCta:'اعرض فكرتك', badgeText:'منصة شراكات ذكية للسوق السعودي',
+    heroTitle:'فكرتك تستحق<br><span class="grad">شريكاً حقيقياً</span>',
+    heroSub:'انشر فكرتك مقابل ٩٩ ريال. كل شخص مهتم يدفع ٢٥ ريالاً للتواصل معك — وتكسب ٥ ريال عن كل مهتم.',
+    cta1:'اعرض فكرتك — ٩٩ ريال', cta2:'تصفح الأفكار',
+    statL1:'فكرة منشورة', statL2:'عملية تواصل', statL3:'رسوم النشر', statL4:'تكسب / مهتم',
+    howTitle:'كيف يعمل خشير؟', howSub:'ثلاث خطوات تربطك بشريك حقيقي',
+    s1t:'انشر فكرتك', s1d:'ادفع ٩٩ ريالاً مرة واحدة وأنشر فكرتك أمام آلاف الباحثين عن شراكات',
+    s2t:'المهتمون يتواصلون', s2d:'كل شخص مهتم يدفع ٢٥ ريالاً للحصول على بياناتك — الدفع يُثبت الجدية',
+    s3t:'اكسب من اهتمامهم', s3d:'تكسب ٥ ريال عن كل شخص مهتم. بعد ٢٠ مهتم تسترد رسوم النشر كاملة',
+    s4t:'تواصل مباشر', s4d:'بعد الدفع يُرسل البريد فوراً — لا انتظار، لا وسيط، لا يدوي',
+    listTitle:'الأفكار المتاحة للشراكة', listSub:'كل فكرة بحاجة لشريك — هل أنت المناسب؟',
+    calcTitle:'احسب أرباحك', calcSub:'كم يمكنك أن تكسب من فكرتك؟', calcL1:'عدد المهتمين المتوقعين',
+    footerTag:'المنصة الذكية لشراكات حقيقية'
+  },
+  en: {
+    navCta:'Post Your Idea', badgeText:'Smart Partnership Platform for Saudi Arabia',
+    heroTitle:'Your idea deserves a<br><span class="grad">real partner</span>',
+    heroSub:'Post your idea for 99 SAR. Every interested party pays 25 SAR to contact you — and you earn 5 SAR each.',
+    cta1:'Post Your Idea — 99 SAR', cta2:'Browse Ideas',
+    statL1:'Ideas Posted', statL2:'Connections Made', statL3:'Listing Fee', statL4:'Earn / Interested',
+    howTitle:'How does Kshare work?', howSub:'Three steps to find your perfect partner',
+    s1t:'Post your idea', s1d:'Pay 99 SAR once and publish your idea to thousands of potential partners',
+    s2t:'Interested parties connect', s2d:'Each interested person pays 25 SAR for your contact — payment proves seriousness',
+    s3t:'Earn from interest', s3d:'Earn 5 SAR per interested person. After 20, you recover your listing fee',
+    s4t:'Direct contact', s4d:'After payment, email is sent instantly — no waiting, no middleman, fully automated',
+    listTitle:'Ideas Available for Partnership', listSub:'Every idea needs a partner — are you the one?',
+    calcTitle:'Calculate Your Earnings', calcSub:'How much can you earn from your idea?', calcL1:'Expected number of interested parties',
+    footerTag:'Smart Platform for Real Partnerships'
+  }
+};
+
+function setLang(lang) {
+  const root = document.getElementById('root');
+  root.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  root.lang = lang;
+  const L = T[lang];
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const k = el.dataset.t;
+    if (L[k] !== undefined) el.innerHTML = L[k];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.lang-btn[onclick="setLang('${lang}')"]`).classList.add('active');
+}
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  loadListings();
+  updateCalc();
+  handlePaymentReturn();
+});
+</script>
+</body>
+</html>
