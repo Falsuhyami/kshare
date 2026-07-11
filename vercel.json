@@ -1,32 +1,14 @@
 {
   "version": 2,
-  "name": "kshare",
-  "buildCommand": null,
-  "outputDirectory": "public",
-  "routes": [
-    {
-      "src": "/api/create-listing",
-      "dest": "/api/create-listing.js"
-    },
-    {
-      "src": "/api/create-unlock",
-      "dest": "/api/create-unlock.js"
-    },
-    {
-      "src": "/api/verify-payment",
-      "dest": "/api/verify-payment.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
-    }
-  ],
   "functions": {
     "api/*.js": {
-      "runtime": "nodejs20.x",
       "maxDuration": 30
     }
   },
+  "rewrites": [
+    { "source": "/", "destination": "/public/index.html" },
+    { "source": "/((?!api/).*)", "destination": "/public/$1" }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
