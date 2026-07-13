@@ -1,6 +1,6 @@
 // =============================================
 // POST /api/create-listing
-// Creates a new listing and initiates Moyasar payment
+// Creates a new listing and initiates MyFatoorah payment
 // =============================================
 
 import { createClient } from '@supabase/supabase-js';
@@ -9,6 +9,10 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+
+// Production: https://api.myfatoorah.com
+// Testing:    https://apitest.myfatoorah.com
+const MF_BASE = 'https://api.myfatoorah.com';
 
 export default async function handler(req, res) {
   // CORS headers
@@ -28,8 +32,6 @@ export default async function handler(req, res) {
   if (!title || !description || !owner_name || !owner_email || !owner_whatsapp) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-
-  // Basic email validation
   if (!owner_email.includes('@')) {
     return res.status(400).json({ error: 'Invalid email' });
   }
@@ -39,6 +41,9 @@ export default async function handler(req, res) {
   if (!phone.match(/^(\+966|0)(5\d{8})$/)) {
     return res.status(400).json({ error: 'Invalid WhatsApp number (use +966 or 05xxxxxxxx)' });
   }
+
+  // Normalize phone → 9 digits (e.g. "501234567") for MyFatoorah
+  const mobileNumber = phone.replace(/^(\+966|0)/, '');
 
   try {
     // 1. Create listing in Supabase with pending_payment status
@@ -65,48 +70,67 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Database error: ' + dbError.message });
     }
 
-    // 2. Create Moyasar payment
+    // 2. Create MyFatoorah invoice
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.host}`;
 
-    const moyasarPayload = {
-      amount: 9900, // 99 SAR in halalas
-      currency: 'SAR',
-      description: `نشر فكرة على خشير: ${title.substring(0, 50)}`,
-      callback_url: `${baseUrl}/api/verify-payment`,
-      publishable_api_key: process.env.MOYASAR_PUBLISHABLE_KEY,
-      metadata: {
+    const mfPayload = {
+      CustomerName: owner_name.trim(),
+      NotificationOption: 'LNK',           // Returns a hosted payment link
+      InvoiceValue: 99,                     // SAR full amount (not halalas)
+      CallBackUrl: `${baseUrl}/api/verify-payment`,
+      ErrorUrl: `${baseUrl}/?error=payment_failed`,
+      Language: 'ar',
+      CustomerEmail: owner_email.trim().toLowerCase(),
+      DisplayCurrencyIso: 'SAR',
+      MobileCountryCode: '966',
+      CustomerMobile: mobileNumber,
+      // Metadata stored as JSON string — retrieved after payment via GetPaymentStatus
+      UserDefinedField: JSON.stringify({
         type: 'listing',
         listing_id: listing.id,
         owner_email: owner_email.trim().toLowerCase(),
         owner_name: owner_name.trim()
-      },
-      source: {
-        type: 'creditcard'
-      }
+      }),
+      InvoiceItems: [{
+        ItemName: `نشر فكرة على خشير: ${title.trim().substring(0, 50)}`,
+        Quantity: 1,
+        UnitPrice: 99
+      }]
     };
 
-    const moyasarRes = await fetch('https://api.moyasar.com/v1/payments', {
+    const mfRes = await fetch(`${MF_BASE}/v2/SendPayment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + Buffer.from(process.env.MOYASAR_SECRET_KEY + ':').toString('base64')
+        'Authorization': `Bearer ${process.env.MYFATOORAH_API_KEY}`
       },
-      body: JSON.stringify(moyasarPayload)
+      body: JSON.stringify(mfPayload)
     });
 
-    const payment = await moyasarRes.json();
+    const mfData = await mfRes.json();
 
-    if (!moyasarRes.ok || !payment.id) {
+    if (!mfRes.ok || !mfData.IsSuccess) {
       // Clean up the listing if payment creation failed
       await supabase.from('listings').delete().eq('id', listing.id);
-      console.error('Moyasar Error:', payment);
-      return res.status(500).json({ error: 'Payment creation failed', details: payment.message || 'Unknown error' });
+      console.error('MyFatoorah Error:', JSON.stringify(mfData));
+      return res.status(500).json({
+        error: 'Payment creation failed',
+        details: mfData.Message || JSON.stringify(mfData.ValidationErrors) || 'Unknown error'
+      });
     }
 
-    // 3. Store payment ID in listing
+    const invoiceId = String(mfData.Data.InvoiceId);
+    const paymentUrl = mfData.Data.PaymentURL;
+
+    if (!paymentUrl) {
+      await supabase.from('listings').delete().eq('id', listing.id);
+      return res.status(500).json({ error: 'No payment URL returned from MyFatoorah' });
+    }
+
+    // 3. Store invoice ID in listing
     await supabase
       .from('listings')
-      .update({ listing_payment_id: payment.id })
+      .update({ listing_payment_id: invoiceId })
       .eq('id', listing.id);
 
     // 4. Store transaction record
@@ -114,22 +138,16 @@ export default async function handler(req, res) {
       type: 'listing',
       reference_id: listing.id,
       amount: 99,
-      payment_id: payment.id,
+      payment_id: invoiceId,
       status: 'pending',
       metadata: { owner_email, listing_title: title }
     });
 
     // 5. Return payment URL to frontend
-    const paymentUrl = payment.source?.transaction_url;
-    if (!paymentUrl) {
-      await supabase.from('listings').delete().eq('id', listing.id);
-      return res.status(500).json({ error: 'No payment URL returned from Moyasar' });
-    }
-
     return res.status(200).json({
       success: true,
       payment_url: paymentUrl,
-      payment_id: payment.id,
+      payment_id: invoiceId,
       listing_id: listing.id
     });
 

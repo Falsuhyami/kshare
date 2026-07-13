@@ -1,6 +1,6 @@
 // =============================================
 // POST /api/create-unlock
-// Creates unlock record and initiates 25 SAR payment
+// Creates unlock record and initiates 25 SAR MyFatoorah payment
 // =============================================
 
 import { createClient } from '@supabase/supabase-js';
@@ -9,6 +9,10 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+
+// Production: https://api.myfatoorah.com
+// Testing:    https://apitest.myfatoorah.com
+const MF_BASE = 'https://api.myfatoorah.com';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -71,47 +75,66 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'DB error: ' + unlockError.message });
     }
 
-    // 4. Create Moyasar payment
+    // 4. Normalize phone for MyFatoorah (9 digits, no country code or leading 0)
+    const phoneClean = unlocker_phone.trim().replace(/\s/g, '');
+    const mobileNumber = phoneClean.replace(/^(\+966|0)/, '').replace(/\D/g, '') || '500000000';
+
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.host}`;
 
-    const moyasarRes = await fetch('https://api.moyasar.com/v1/payments', {
+    const mfPayload = {
+      CustomerName: unlocker_name.trim(),
+      NotificationOption: 'LNK',
+      InvoiceValue: 25,
+      CallBackUrl: `${baseUrl}/api/verify-payment`,
+      ErrorUrl: `${baseUrl}/?error=payment_failed`,
+      Language: 'ar',
+      CustomerEmail: unlocker_email.trim().toLowerCase(),
+      DisplayCurrencyIso: 'SAR',
+      MobileCountryCode: '966',
+      CustomerMobile: mobileNumber,
+      UserDefinedField: JSON.stringify({
+        type: 'unlock',
+        listing_id: listing.id,
+        unlock_id: unlock.id,
+        unlocker_email: unlocker_email.trim().toLowerCase(),
+        unlocker_name: unlocker_name.trim(),
+        unlocker_phone: unlocker_phone.trim()
+      }),
+      InvoiceItems: [{
+        ItemName: `فتح بيانات تواصل: ${listing.title.substring(0, 40)}`,
+        Quantity: 1,
+        UnitPrice: 25
+      }]
+    };
+
+    const mfRes = await fetch(`${MF_BASE}/v2/SendPayment`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Basic ' + Buffer.from(process.env.MOYASAR_SECRET_KEY + ':').toString('base64')
+        'Authorization': `Bearer ${process.env.MYFATOORAH_API_KEY}`
       },
-      body: JSON.stringify({
-        amount: 2500, // 25 SAR in halalas
-        currency: 'SAR',
-        description: `فتح بيانات تواصل: ${listing.title.substring(0, 40)}`,
-        callback_url: `${baseUrl}/api/verify-payment`,
-        metadata: {
-          type: 'unlock',
-          listing_id: listing.id,
-          unlock_id: unlock.id,
-          unlocker_email: unlocker_email.trim().toLowerCase(),
-          unlocker_name: unlocker_name.trim(),
-          unlocker_phone: unlocker_phone.trim()
-        },
-        source: {
-          type: 'creditcard'
-        }
-      })
+      body: JSON.stringify(mfPayload)
     });
 
-    const payment = await moyasarRes.json();
+    const mfData = await mfRes.json();
 
-    if (!moyasarRes.ok || !payment.id) {
-      // Cleanup
+    if (!mfRes.ok || !mfData.IsSuccess) {
+      // Cleanup pending unlock
       await supabase.from('unlocks').delete().eq('id', unlock.id);
-      console.error('Moyasar error:', payment);
-      return res.status(500).json({ error: 'Payment creation failed' });
+      console.error('MyFatoorah error:', JSON.stringify(mfData));
+      return res.status(500).json({
+        error: 'Payment creation failed',
+        details: mfData.Message || JSON.stringify(mfData.ValidationErrors) || 'Unknown error'
+      });
     }
 
-    // 5. Update unlock with payment ID
+    const invoiceId = String(mfData.Data.InvoiceId);
+    const paymentUrl = mfData.Data.PaymentURL;
+
+    // 5. Update unlock with invoice ID
     await supabase
       .from('unlocks')
-      .update({ payment_id: payment.id })
+      .update({ payment_id: invoiceId })
       .eq('id', unlock.id);
 
     // 6. Store transaction
@@ -119,15 +142,15 @@ export default async function handler(req, res) {
       type: 'unlock',
       reference_id: unlock.id,
       amount: 25,
-      payment_id: payment.id,
+      payment_id: invoiceId,
       status: 'pending',
       metadata: { listing_id, unlocker_email }
     });
 
     return res.status(200).json({
       success: true,
-      payment_url: payment.source?.transaction_url,
-      payment_id: payment.id,
+      payment_url: paymentUrl,
+      payment_id: invoiceId,
       unlock_id: unlock.id
     });
 

@@ -727,27 +727,35 @@ function updateCalc() {
 }
 
 // ── HANDLE PAYMENT RETURN ──
-function handlePaymentReturn() {
+async function handlePaymentReturn() {
   const params = new URLSearchParams(window.location.search);
   const success = params.get('success');
-  const error = params.get('error');
-  const contact = params.get('contact');
+  const error   = params.get('error');
+  const token   = params.get('token');   // one-time UUID for unlock contact
 
   if (success === 'listing') {
     openModal('successListingOverlay');
     loadListings();
   }
 
-  if (success === 'unlock' && contact) {
+  if (success === 'unlock' && token) {
     try {
-      const info = JSON.parse(decodeURIComponent(contact));
-      document.getElementById('revealedName').textContent = info.name || '—';
-      document.getElementById('revealedWA').textContent = info.whatsapp || '—';
-      document.getElementById('revealedEmail').textContent = info.email || '—';
-      const waNum = (info.whatsapp || '').replace(/\D/g, '');
-      document.getElementById('revealedWALink').href = `https://wa.me/${waNum}`;
-      openModal('successUnlockOverlay');
-      loadListings(); // refresh interest counts
+      // Fetch contact info via secure one-time token (token is nullified after this call)
+      const resp = await fetch(`/api/get-contact?token=${encodeURIComponent(token)}`);
+      const data = await resp.json();
+
+      if (data.contact) {
+        document.getElementById('revealedName').textContent = data.contact.name || '—';
+        document.getElementById('revealedWA').textContent   = data.contact.whatsapp || '—';
+        document.getElementById('revealedEmail').textContent = data.contact.email || '—';
+        const waNum = (data.contact.whatsapp || '').replace(/\D/g, '');
+        document.getElementById('revealedWALink').href = `https://wa.me/${waNum}`;
+        openModal('successUnlockOverlay');
+        loadListings();
+      } else {
+        // Token invalid / already used — but email was sent anyway
+        showToast('تم الدفع بنجاح — تحقق من بريدك الإلكتروني للحصول على بيانات التواصل', 'success');
+      }
     } catch (e) {
       showToast('تم الدفع بنجاح — تحقق من بريدك الإلكتروني', 'success');
     }
@@ -755,15 +763,16 @@ function handlePaymentReturn() {
 
   if (error) {
     const msgs = {
-      'payment_not_paid': 'لم يتم الدفع أو تم إلغاؤه',
+      'payment_not_paid':    'لم يتم الدفع أو تم إلغاؤه',
       'payment_verify_failed': 'تعذّر التحقق من الدفع، تواصل مع الدعم',
-      'listing_not_found': 'لم نجد الفكرة، تواصل مع الدعم',
-      'server_error': 'خطأ في الخادم، حاول مجدداً'
+      'listing_not_found':   'لم نجد الفكرة، تواصل مع الدعم',
+      'server_error':        'خطأ في الخادم، حاول مجدداً',
+      'payment_failed':      'فشل الدفع، حاول مجدداً'
     };
     showToast(msgs[error] || 'حدث خطأ: ' + error, 'error');
   }
 
-  // Clean URL
+  // Clean URL after reading params
   if (success || error) {
     window.history.replaceState({}, '', window.location.pathname);
   }
