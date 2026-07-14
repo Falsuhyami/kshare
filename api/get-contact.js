@@ -47,7 +47,7 @@ export default async function handler(req, res) {
     // 2. Get listing contact info (using service_role — bypasses RLS to read private columns)
     const { data: listing, error: listingError } = await supabase
       .from('listings')
-      .select('owner_name, owner_email, owner_whatsapp')
+      .select('title, owner_name, owner_email, owner_whatsapp, project_type')
       .eq('id', unlock.listing_id)
       .single();
 
@@ -61,8 +61,10 @@ export default async function handler(req, res) {
       .update({ contact_token: null })
       .eq('id', unlock.id);
 
-    // 4. Return contact info
+    // 4. Return contact info + listing context
     return res.status(200).json({
+      listing_title: listing.title,
+      project_type: listing.project_type,
       contact: {
         name: listing.owner_name,
         whatsapp: listing.owner_whatsapp,

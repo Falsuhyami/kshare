@@ -1,7 +1,7 @@
 // =============================================
-// GET /api/verify-payment?paymentId=XXX
-// Called by MyFatoorah as the CallBackUrl after payment
-// Verifies payment, updates DB, sends emails, redirects to site
+// GET /api/verify-payment
+// Moyasar callback — called after payment with ?id=PAYMENT_ID&status=paid
+// Verifies payment server-side, updates DB, sends emails, redirects to site
 // SECURITY: Contact info is stored behind a one-time UUID token
 // =============================================
 
@@ -13,14 +13,17 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-// Production: https://api.myfatoorah.com
-// Testing:    https://apitest.myfatoorah.com
-const MF_BASE = 'https://api.myfatoorah.com';
+const MOYASAR_BASE = 'https://api.moyasar.com/v1';
+
+function moyasarAuth() {
+  return 'Basic ' + Buffer.from(process.env.MOYASAR_API_KEY + ':').toString('base64');
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Email helper (Resend)
 // ──────────────────────────────────────────────────────────────────────────────
 async function sendEmail({ to, subject, html }) {
+  if (!process.env.RESEND_API_KEY) return; // skip if not configured
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -37,7 +40,6 @@ async function sendEmail({ to, subject, html }) {
     });
     const data = await res.json();
     if (!res.ok) console.error('Resend error:', data);
-    return data;
   } catch (err) {
     console.error('Email send failed:', err);
   }
@@ -48,29 +50,29 @@ async function sendEmail({ to, subject, html }) {
 // ──────────────────────────────────────────────────────────────────────────────
 function listingActivatedEmail({ owner_name, title, site_url }) {
   return {
-    subject: `✅ فكرتك "${title}" أصبحت مباشرة على خشير`,
+    subject: `✅ مشروعك "${title}" أصبح مباشراً على خشير`,
     html: `
-      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #fff; padding: 40px; border-radius: 12px;">
+      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f7faf5; color: #14231a; padding: 40px; border-radius: 12px; border: 1px solid #dcfce7;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #a855f7; font-size: 2rem; margin: 0;">خشير</h1>
-          <p style="color: #666; margin: 5px 0;">المنصة الذكية لشراكات حقيقية</p>
+          <h1 style="color: #16a34a; font-size: 2rem; margin: 0;">خشير</h1>
+          <p style="color: #52735c; margin: 5px 0;">منصة المشاريع والشراكات السعودية</p>
         </div>
-        <h2 style="color: #22c55e;">🎉 تهانينا! فكرتك مباشرة الآن</h2>
+        <h2 style="color: #15803d;">🎉 تهانينا! مشروعك مباشر الآن</h2>
         <p>مرحباً ${owner_name}،</p>
-        <p>تم نشر فكرتك "<strong>${title}</strong>" بنجاح على منصة خشير وأصبحت ظاهرة للمهتمين.</p>
-        <div style="background: #1a1a2e; padding: 20px; border-radius: 8px; border-right: 4px solid #a855f7; margin: 20px 0;">
-          <p style="margin: 0; font-size: 1.1rem;">💡 <strong>كيف يعمل النظام؟</strong></p>
-          <ul style="color: #ccc; line-height: 2;">
+        <p>تم نشر مشروعك "<strong>${title}</strong>" بنجاح على منصة خشير وأصبح ظاهراً للمهتمين.</p>
+        <div style="background: #dcfce7; padding: 20px; border-radius: 8px; border-right: 4px solid #16a34a; margin: 20px 0;">
+          <p style="margin: 0 0 10px; font-size: 1.1rem; color: #15803d;">💡 <strong>كيف يعمل النظام؟</strong></p>
+          <ul style="color: #14231a; line-height: 2; margin: 0; padding-right: 20px;">
             <li>كل شخص مهتم يدفع <strong>25 ريال</strong> للحصول على بياناتك</li>
             <li>تكسب <strong>5 ريال</strong> عن كل شخص مهتم</li>
-            <li>بعد <strong>20 مهتم</strong> تسترد رسوم النشر كاملة</li>
+            <li>بعد <strong>10 مهتمين</strong> تسترد رسوم النشر كاملة</li>
           </ul>
         </div>
-        <p style="color: #888;">سنرسل لك إشعاراً فور اهتمام أي شخص بفكرتك.</p>
+        <p style="color: #52735c;">سنرسل لك إشعاراً فور اهتمام أي شخص بمشروعك.</p>
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${site_url}" style="background: linear-gradient(135deg, #a855f7, #ec4899); color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">زيارة الموقع</a>
+          <a href="${site_url}" style="background: #16a34a; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 1rem;">زيارة خشير</a>
         </div>
-        <p style="color: #444; font-size: 0.8rem; text-align: center; margin-top: 30px;">خشير — فكرتك تستحق شريكاً حقيقياً</p>
+        <p style="color: #52735c; font-size: 0.8rem; text-align: center; margin-top: 30px;">خشير — مشروعك يستحق شريكاً حقيقياً</p>
       </div>
     `
   };
@@ -78,28 +80,29 @@ function listingActivatedEmail({ owner_name, title, site_url }) {
 
 function newInterestEmail({ owner_name, listing_title, interest_count, earn_balance, unlocker_name, unlocker_phone, unlocker_email_addr }) {
   return {
-    subject: `🔔 شخص جديد مهتم بفكرتك على خشير +5 ريال`,
+    subject: `🔔 شخص جديد مهتم بمشروعك على خشير — كسبت 5 ريال`,
     html: `
-      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #fff; padding: 40px; border-radius: 12px;">
+      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f7faf5; color: #14231a; padding: 40px; border-radius: 12px; border: 1px solid #dcfce7;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="color: #a855f7;">خشير</h1>
+          <h1 style="color: #16a34a; margin: 0;">خشير</h1>
+          <p style="color: #52735c; margin: 4px 0 0;">منصة المشاريع والشراكات السعودية</p>
         </div>
-        <h2 style="color: #22c55e;">🎉 شخص جديد مهتم بفكرتك!</h2>
+        <h2 style="color: #15803d;">🎉 شخص جديد مهتم بمشروعك!</h2>
         <p>مرحباً ${owner_name}،</p>
-        <p>قام شخص بفتح بياناتك من فكرة "<strong>${listing_title}</strong>" ودفع 25 ريال للتواصل معك.</p>
-        <div style="background: #1a1a2e; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="color: #a855f7; margin: 0 0 10px; font-weight: bold;">📞 بيانات المهتم:</p>
-          <p style="margin: 5px 0;">الاسم: <strong>${unlocker_name}</strong></p>
-          <p style="margin: 5px 0;">الجوال: <strong>${unlocker_phone}</strong></p>
-          <p style="margin: 5px 0;">البريد: <strong>${unlocker_email_addr}</strong></p>
+        <p>قام شخص بفتح بياناتك من مشروع "<strong>${listing_title}</strong>" ودفع 25 ريال للتواصل معك.</p>
+        <div style="background: #fff; border: 1px solid #dcfce7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="color: #15803d; margin: 0 0 12px; font-weight: bold;">📞 بيانات المهتم:</p>
+          <p style="margin: 6px 0;">الاسم: <strong>${unlocker_name}</strong></p>
+          <p style="margin: 6px 0;">الجوال: <strong>${unlocker_phone}</strong></p>
+          <p style="margin: 6px 0;">البريد: <strong>${unlocker_email_addr}</strong></p>
         </div>
-        <div style="background: #0d2d0d; padding: 15px; border-radius: 8px; border-right: 4px solid #22c55e; margin: 20px 0;">
-          <p style="color: #22c55e; margin: 0; font-size: 1.1rem;">
-            ✅ رصيدك الحالي: <strong>${earn_balance} ريال</strong> من ${interest_count} مهتم
+        <div style="background: #dcfce7; padding: 15px; border-radius: 8px; border-right: 4px solid #16a34a; margin: 20px 0;">
+          <p style="color: #15803d; margin: 0; font-size: 1.1rem; font-weight: bold;">
+            ✅ رصيدك الحالي: ${earn_balance} ريال من ${interest_count} مهتم
           </p>
         </div>
-        <p style="color: #888;">نصيحة: تواصل مع المهتم خلال 24 ساعة لزيادة فرص الشراكة.</p>
-        <p style="color: #444; font-size: 0.8rem; text-align: center; margin-top: 30px;">خشير — المنصة الذكية لشراكات حقيقية</p>
+        <p style="color: #52735c;">نصيحة: تواصل مع المهتم خلال 24 ساعة لزيادة فرص الشراكة.</p>
+        <p style="color: #52735c; font-size: 0.8rem; text-align: center; margin-top: 30px;">خشير — منصة المشاريع والشراكات السعودية</p>
       </div>
     `
   };
@@ -108,31 +111,32 @@ function newInterestEmail({ owner_name, listing_title, interest_count, earn_bala
 function contactRevealedEmail({ unlocker_name, listing_title, owner_name, owner_whatsapp, owner_email_addr }) {
   const waLink = `https://wa.me/${(owner_whatsapp || '').replace(/\D/g, '')}`;
   return {
-    subject: `✅ تم فتح بيانات صاحب الفكرة — ${listing_title}`,
+    subject: `✅ تم فتح بيانات صاحب المشروع — ${listing_title}`,
     html: `
-      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #fff; padding: 40px; border-radius: 12px;">
+      <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f7faf5; color: #14231a; padding: 40px; border-radius: 12px; border: 1px solid #dcfce7;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="color: #a855f7;">خشير</h1>
+          <h1 style="color: #16a34a; margin: 0;">خشير</h1>
+          <p style="color: #52735c; margin: 4px 0 0;">منصة المشاريع والشراكات السعودية</p>
         </div>
-        <h2 style="color: #22c55e;">🔓 تم فتح بيانات التواصل</h2>
+        <h2 style="color: #15803d;">🔓 تم فتح بيانات التواصل</h2>
         <p>مرحباً ${unlocker_name}،</p>
-        <p>شكراً لاهتمامك بفكرة "<strong>${listing_title}</strong>". هذه بيانات صاحب الفكرة:</p>
-        <div style="background: #1a1a2e; padding: 25px; border-radius: 8px; border: 2px solid #a855f7; margin: 20px 0; text-align: center;">
-          <p style="font-size: 1.3rem; margin: 0 0 5px;"><strong>${owner_name}</strong></p>
-          <p style="color: #22c55e; margin: 5px 0; font-size: 1.1rem;">📱 ${owner_whatsapp}</p>
-          <p style="color: #888; margin: 5px 0;">${owner_email_addr}</p>
+        <p>شكراً لاهتمامك بمشروع "<strong>${listing_title}</strong>". هذه بيانات صاحب المشروع:</p>
+        <div style="background: #fff; padding: 25px; border-radius: 8px; border: 2px solid #16a34a; margin: 20px 0; text-align: center;">
+          <p style="font-size: 1.3rem; margin: 0 0 8px; color: #14231a;"><strong>${owner_name}</strong></p>
+          <p style="color: #16a34a; margin: 6px 0; font-size: 1.1rem; font-weight: bold;">📱 ${owner_whatsapp}</p>
+          <p style="color: #52735c; margin: 6px 0;">${owner_email_addr}</p>
         </div>
         <div style="text-align: center; margin: 25px 0;">
-          <a href="${waLink}" style="background: #25D366; color: white; padding: 14px 35px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 1.1rem; display: inline-block;">
+          <a href="${waLink}" style="background: #25D366; color: white; padding: 14px 35px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 1.05rem; display: inline-block;">
             💬 تواصل عبر واتساب الآن
           </a>
         </div>
-        <div style="background: #1a1a0d; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <p style="color: #fbbf24; margin: 0; font-size: 0.9rem;">
-            ⚠️ تنبيه: خشير منصة ربط فقط. أي اتفاقية شراكة تتم خارج المنصة وعلى مسؤولية الطرفين.
+        <div style="background: #fef3c7; padding: 15px; border-radius: 8px; border-right: 4px solid #d97706; margin: 20px 0;">
+          <p style="color: #92400e; margin: 0; font-size: 0.9rem;">
+            تنبيه: خشير منصة ربط فقط. أي اتفاقية شراكة تتم خارج المنصة وعلى مسؤولية الطرفين.
           </p>
         </div>
-        <p style="color: #444; font-size: 0.8rem; text-align: center; margin-top: 30px;">خشير — المنصة الذكية لشراكات حقيقية</p>
+        <p style="color: #52735c; font-size: 0.8rem; text-align: center; margin-top: 30px;">خشير — منصة المشاريع والشراكات السعودية</p>
       </div>
     `
   };
@@ -144,55 +148,58 @@ function contactRevealedEmail({ unlocker_name, listing_title, owner_name, owner_
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  // MyFatoorah sends ?paymentId=XXX as the callback query param
-  const { paymentId } = req.query;
+  // Moyasar sends: ?id=PAYMENT_ID&status=paid (or failed/canceled)
+  const { id: paymentId, status: callbackStatus } = req.query;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.host}`;
 
   if (!paymentId) {
+    console.error('No payment ID in Moyasar callback');
     return res.redirect(`${siteUrl}/?error=no_payment_id`);
   }
 
   try {
-    // 1. Verify payment with MyFatoorah
-    const mfRes = await fetch(`${MF_BASE}/v2/GetPaymentStatus`, {
-      method: 'POST',
+    // 1. Verify payment with Moyasar (always server-side — don't trust callback params)
+    const mRes = await fetch(`${MOYASAR_BASE}/payments/${paymentId}`, {
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MYFATOORAH_API_KEY}`
-      },
-      body: JSON.stringify({ Key: paymentId, KeyType: 'paymentId' })
+        'Authorization': moyasarAuth()
+      }
     });
 
-    const mfData = await mfRes.json();
-
-    if (!mfRes.ok || !mfData.IsSuccess) {
-      console.error('MyFatoorah verify error:', JSON.stringify(mfData));
+    const mText = await mRes.text();
+    let payment;
+    try {
+      payment = JSON.parse(mText);
+    } catch (parseErr) {
+      console.error('Moyasar verify non-JSON. Status:', mRes.status, 'Body:', mText);
       return res.redirect(`${siteUrl}/?error=payment_verify_failed`);
     }
 
-    const invoiceData = mfData.Data;
-
-    if (invoiceData.InvoiceStatus !== 'Paid') {
-      return res.redirect(`${siteUrl}/?error=payment_not_paid&status=${invoiceData.InvoiceStatus}`);
+    if (!mRes.ok || payment.errors) {
+      console.error('Moyasar verify error:', JSON.stringify(payment));
+      return res.redirect(`${siteUrl}/?error=payment_verify_failed`);
     }
 
-    // 2. Parse metadata from UserDefinedField
-    let meta = {};
-    try {
-      meta = JSON.parse(invoiceData.UserDefinedField || '{}');
-    } catch (e) {
-      console.error('Failed to parse UserDefinedField:', invoiceData.UserDefinedField);
-      return res.redirect(`${siteUrl}/?error=metadata_parse_error`);
+    // 2. Check actual payment status
+    if (payment.status !== 'paid') {
+      console.log(`Payment ${paymentId} status: ${payment.status}`);
+      return res.redirect(`${siteUrl}/?error=payment_not_completed&status=${payment.status}`);
     }
 
+    // 3. Read metadata
+    const meta = payment.metadata || {};
     const type = meta.type;
-    const mfInvoiceId = String(invoiceData.InvoiceId);
 
-    // 3. Idempotency — check if already processed
+    if (!type) {
+      console.error('No type in payment metadata:', JSON.stringify(meta));
+      return res.redirect(`${siteUrl}/?error=missing_metadata`);
+    }
+
+    // 4. Idempotency — check if already processed
     const { data: existing } = await supabase
       .from('transactions')
       .select('status')
-      .eq('payment_id', mfInvoiceId)
+      .eq('payment_id', paymentId)
       .single();
 
     if (existing?.status === 'paid') {
@@ -200,11 +207,11 @@ export default async function handler(req, res) {
       return res.redirect(`${siteUrl}/?${type === 'listing' ? 'success=listing&already=true' : 'error=already_processed'}`);
     }
 
-    // 4. Mark transaction as paid
+    // 5. Mark transaction as paid
     await supabase
       .from('transactions')
       .update({ status: 'paid' })
-      .eq('payment_id', mfInvoiceId);
+      .eq('payment_id', paymentId);
 
     // ──────────────────────────────────────────────────────────────────────────
     // LISTING PAYMENT — activate listing
@@ -218,7 +225,8 @@ export default async function handler(req, res) {
         .from('listings')
         .update({
           status: 'active',
-          listing_payment_id: mfInvoiceId
+          listing_payment_id: paymentId,
+          activated_at: new Date().toISOString()
         })
         .eq('id', listingId)
         .select()
@@ -252,20 +260,21 @@ export default async function handler(req, res) {
       const unlockerName = meta.unlocker_name;
       const unlockerPhone = meta.unlocker_phone;
 
-      // 1. Generate one-time UUID token (SECURITY: contact is behind this token, never in URL)
+      // Generate one-time UUID token (SECURITY: contact is behind this token, never in URL)
       const contactToken = randomUUID();
 
-      // 2. Mark unlock as paid and store the token
+      // Mark unlock as paid + store token
       await supabase
         .from('unlocks')
         .update({
           status: 'paid',
-          payment_id: mfInvoiceId,
-          contact_token: contactToken
+          payment_id: paymentId,
+          contact_token: contactToken,
+          paid_at: new Date().toISOString()
         })
         .eq('id', unlockId);
 
-      // 3. Get listing with contact info
+      // Get listing with contact info
       const { data: listing } = await supabase
         .from('listings')
         .select('*')
@@ -276,7 +285,7 @@ export default async function handler(req, res) {
         return res.redirect(`${siteUrl}/?error=listing_not_found`);
       }
 
-      // 4. Update listing interest count and earn balance
+      // Update listing interest count and earn balance
       const newInterestCount = (listing.interest_count || 0) + 1;
       const newEarnBalance = (listing.earn_balance || 0) + 5;
 
@@ -288,7 +297,7 @@ export default async function handler(req, res) {
         })
         .eq('id', listingId);
 
-      // 5. Send contact info email to unlocker (email is the safe fallback)
+      // Send contact info email to unlocker
       await sendEmail({
         to: unlockerEmail,
         ...contactRevealedEmail({
@@ -300,7 +309,7 @@ export default async function handler(req, res) {
         })
       });
 
-      // 6. Send notification email to listing owner
+      // Send notification to listing owner (+5 SAR)
       await sendEmail({
         to: listing.owner_email,
         ...newInterestEmail({
@@ -314,11 +323,22 @@ export default async function handler(req, res) {
         })
       });
 
-      // 7. SECURE redirect — only the token goes in the URL, NOT contact info
+      // Record owner commission
+      await supabase.from('transactions').insert({
+        type: 'owner_commission',
+        reference_id: listingId,
+        amount: 5,
+        payment_id: paymentId,
+        status: 'credited',
+        metadata: { unlock_id: unlockId, source: 'unlock_payment' }
+      });
+
+      // SECURE redirect — only the token goes in URL, NOT contact info
       return res.redirect(`${siteUrl}/?success=unlock&token=${contactToken}`);
     }
 
     // Unknown payment type
+    console.error('Unknown payment type in metadata:', type);
     return res.redirect(`${siteUrl}/?error=unknown_payment_type`);
 
   } catch (err) {
